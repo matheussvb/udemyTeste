@@ -22,4 +22,8 @@ public class Calculadora {
 
 	}
 
+	public int dividir(String a, String b) {
+		return Integer.valueOf(a) / Integer.valueOf(b);
+	}
+
 }
