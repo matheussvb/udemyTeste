@@ -1,5 +1,4 @@
 
-
 import org.junit.Assert;
 
 import br.ce.wcaquino.entidades.Usuario;
@@ -8,7 +7,7 @@ public class AssertTest {
 
 	@org.junit.Test
 	public void Test() {
-
+//https://www.udemy.com/course/testes-unitarios-em-java/learn/lecture/7047096#overview
 		Assert.assertTrue(true);
 		Assert.assertFalse(false);
 		Assert.assertEquals("Erro de comparação", 2, 2);
@@ -35,15 +34,6 @@ public class AssertTest {
 
 		Assert.assertNull(u3);
 		Assert.assertNotNull(u1);
-		
-		
-		
-		
-		
-		
-		
-		
-		
 
 	}
 
