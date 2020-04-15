@@ -1,6 +1,8 @@
 package br.ce.wcaquino.matchers;
 
 import java.lang.reflect.Constructor;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.hamcrest.Description;
@@ -17,8 +19,9 @@ public class DataDiferencaDiasMatchers extends TypeSafeMatcher<Date> {
 	}
 
 	public void describeTo(Description description) {
-		// TODO Auto-generated method stub
-
+		Date dataEsperava = DataUtils.obterDataComDiferencaDias(qtdDias);
+		DateFormat format = new SimpleDateFormat("dd/MM/yyyy");
+		description.appendText(format.format(dataEsperava));
 	}
 
 	@Override

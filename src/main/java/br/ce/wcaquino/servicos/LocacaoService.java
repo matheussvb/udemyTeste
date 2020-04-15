@@ -21,6 +21,16 @@ public class LocacaoService {
 	private SPCService spcService;
 
 	private EmailService emailService;
+	
+	public void prorrogarLocacao(Locacao locacao, int dias) {
+		Locacao locacao2 = new Locacao();
+		locacao2.setUsuario(locacao.getUsuario());
+		locacao2.setFilmes(locacao.getFilmes());
+		locacao2.setDataLocacao(new Date());
+		locacao2.setDataRetorno(DataUtils.obterDataComDiferencaDias(dias));
+		locacao2.setValor(locacao.getValor() * dias);
+		dao.salvar(locacao2);
+	}
 
 	public Locacao alugarFilme(Usuario usuario, List<Filme> filmes) throws FilmeSemEstoqueException, LocadoraException {
 
@@ -38,10 +48,18 @@ public class LocacaoService {
 			}
 		}
 
-		if (spcService.possuiNegativacao(usuario)) {
-			throw new LocadoraException("Usuário negativo");
+		boolean negativado;
+		try {
+			negativado = spcService.possuiNegativacao(usuario);
+		} catch (Exception e) {
+			throw new LocadoraException("Problemas com SPC, tente novamente!");
 		}
 
+		if (negativado) {
+			throw new LocadoraException("Usuário negativo");
+		}
+		
+		
 		Locacao locacao = new Locacao();
 		locacao.setFilmes(filmes);
 		locacao.setUsuario(usuario);
@@ -89,21 +107,21 @@ public class LocacaoService {
 	public void notificarAtrasos() {
 		List<Locacao> locacoes = dao.obterLocacoesPendentes();
 		for (Locacao locacao : locacoes) {
-			if(locacao.getDataRetorno().before(new Date()))
-			emailService.notificarAtraso(locacao.getUsuario());
+			if (locacao.getDataRetorno().before(new Date()))
+				emailService.notificarAtraso(locacao.getUsuario());
 		}
 	}
 
-	public void setLocacaoDao(LocacaoDao dao) {
-		this.dao = dao;
-	}
-
-	public void setSPCService(SPCService sprcService) {
-		this.spcService = sprcService;
-	}
-
-	public void setEmailService(EmailService emailService) {
-		this.emailService = emailService;
-	}
+//	public void setLocacaoDao(LocacaoDao dao) {
+//		this.dao = dao;
+//	}
+//
+//	public void setSPCService(SPCService sprcService) {
+//		this.spcService = sprcService;
+//	}
+//
+//	public void setEmailService(EmailService emailService) {
+//		this.emailService = emailService;
+//	}
 
 }
