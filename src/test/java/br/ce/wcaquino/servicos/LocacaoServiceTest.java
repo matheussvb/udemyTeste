@@ -6,27 +6,21 @@ import static br.ce.wcaquino.builders.LocacaoBuilder.umLocacao;
 import static br.ce.wcaquino.builders.UsuarioBuilder.umUsuario;
 import static br.ce.wcaquino.matchers.DataDiferencaDiasMatchers.ehHoje;
 import static br.ce.wcaquino.matchers.DataDiferencaDiasMatchers.ehHojeComDiferencaDias;
-import static br.ce.wcaquino.matchers.MatchersProprios.caiEm;
 import static br.ce.wcaquino.matchers.MatchersProprios.caiNumaSegunda;
 import static br.ce.wcaquino.utils.DataUtils.isMesmaData;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,6 +31,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.Spy;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.reflect.Whitebox;
 
 import br.ce.wcaquino.dao.LocacaoDao;
 import br.ce.wcaquino.entidades.Filme;
@@ -56,6 +53,7 @@ public class LocacaoServiceTest {
 	public ErrorCollector error = new ErrorCollector();
 
 	@InjectMocks
+	@Spy
 	private LocacaoService service;
 
 	@Mock
@@ -70,64 +68,86 @@ public class LocacaoServiceTest {
 	@Before
 	public void setUp() {
 		MockitoAnnotations.initMocks(this);
-//		System.out.println("@Before");
-//
-//		service = new LocacaoService();
-//
-//		dao = Mockito.mock(LocacaoDao.class);
-//		service.setLocacaoDao(dao);
-//
-//		spcService = Mockito.mock(SPCService.class);
-//		service.setSPCService(spcService);
-//
-//		emailService = Mockito.mock(EmailService.class);
-//		service.setEmailService(emailService);
+//		service = PowerMockito.spy(service);
+	}
 
-	}
-	
-	@Test
-	public void deveProrrogarUmaLocacao() {
-		//cenario
-		Locacao locacao = umLocacao().agora();
-		
-		//acao
-		service.prorrogarLocacao(locacao, 3);
-		
-		
-		//verificacao
-		//Mockito.verify(dao).salvar(Mockito.any(Locacao.class)); // new dentro do metodo
-		
-		//argument captor para capturar o que foi passado.
-		ArgumentCaptor<Locacao> argCaptor = ArgumentCaptor.forClass(Locacao.class);
-		
-		Mockito.verify(dao).salvar(argCaptor.capture());
-		
-		Locacao locacaoRetorno = argCaptor.getValue();
-		
-		error.checkThat(locacaoRetorno.getValor(), CoreMatchers.is(12.0));
-//		Assert.assertThat(locacaoRetorno.getValor(), is(4.0));
-//		error.checkThat(locacaoRetorno.getDataLocacao(), ehHoje());
-//		error.checkThat(locacaoRetorno.getDataRetorno(), ehHojeComDiferencaDias(3));
-	}
-	
-	@Test
-	public void deveTratarErroNoSPC() throws Exception {
-		//cenario
+	@Test // executa metodo privado diretamente
+	public void deveCalcularValorLocacao() throws Exception {
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filmes = Arrays.asList(umFilme().agora());
-		
+		// cenario
+
+		// acao - reflect
+		Class<LocacaoService> clazz = LocacaoService.class;
+		Method metodo = clazz.getDeclaredMethod("calcularValorLocacao", List.class);
+		metodo.setAccessible(true);
+		Double valor = (Double) metodo.invoke(service, filmes);
+
+//		Double valor = (Double) Whitebox.invokeMethod(service, "calcularValorLocacao", filmes); //powermock
+
+		// verificacao
+		Assert.assertThat(valor, is(4.0));
+
+	}
+
+//	@Test // moca metodo privado para teste
+//	public void deveAlugarFilmeSemCalcularValor() throws Exception {
+//
+//		// cenario
+//		Usuario usuario = umUsuario().agora();
+//		List<Filme> filmes = Arrays.asList(umFilme().agora());
+//
+//		PowerMockito.doReturn(1.0).when(service, "calcularValorLocacao", filmes);
+//
+//		// acao
+//		Locacao locacao = service.alugarFilme(usuario, filmes);
+//
+//		// verificacao
+//		Assert.assertThat(locacao.getValor(), is(1.0));
+//		PowerMockito.verifyPrivate(service).invoke("calcularValorLocacao", filmes);
+//	}
+
+	@Test
+	public void deveProrrogarUmaLocacao() {
+		// cenario
+		Locacao locacao = umLocacao().agora();
+
+		// acao
+		service.prorrogarLocacao(locacao, 3);
+
+		// verificacao
+		// Mockito.verify(dao).salvar(Mockito.any(Locacao.class)); // new dentro do
+		// metodo
+
+		// argument captor para capturar o que foi passado.
+		ArgumentCaptor<Locacao> argCaptor = ArgumentCaptor.forClass(Locacao.class);
+
+		Mockito.verify(dao).salvar(argCaptor.capture());
+
+		Locacao locacaoRetorno = argCaptor.getValue();
+
+		error.checkThat(locacaoRetorno.getValor(), CoreMatchers.is(12.0));
+//		Assert.assertThat(locacaoRetorno.getValor(), is(4.0));
+		error.checkThat(locacaoRetorno.getDataLocacao(), ehHoje());
+		error.checkThat(locacaoRetorno.getDataRetorno(), ehHojeComDiferencaDias(3));
+	}
+
+	@Test
+	public void deveTratarErroNoSPC() throws Exception {
+		// cenario
+		Usuario usuario = umUsuario().agora();
+		List<Filme> filmes = Arrays.asList(umFilme().agora());
+
 		when(spcService.possuiNegativacao(usuario)).thenThrow(new Exception("Falha catastrófica"));
-		
+
 		exception.expect(LocadoraException.class);
 		exception.expectMessage("Problemas com SPC, tente novamente!");
-		
-		//acao
+
+		// acao
 		service.alugarFilme(usuario, filmes);
-		
-		
-		//verificacao
-		
-		
+
+		// verificacao
+
 	}
 
 	@Test
@@ -179,31 +199,17 @@ public class LocacaoServiceTest {
 
 	@Test
 	public void deveAlugarFilme() throws Exception {
-		Assume.assumeFalse(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
-
 		// cenario
-
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filmes = Arrays.asList(umFilme().comValor(5.0).agora());
+
+		Mockito.doReturn(DataUtils.obterData(28, 4, 2017)).when(service).obterData();
 
 		// acao
 		Locacao locacao = service.alugarFilme(usuario, filmes);
 
-		// verificacao
-//		erro.checkThat(locacao.getValor(), is(equalTo(5.0)));
-//		erro.checkThat(locacao.getValor(), is(not(6.0)));
-//		assertEquals(5.0, locacao.getValor(), 0.01);
-//		erro.checkThat(isMesmaData(locacao.getDataLocacao(), new Date()), is(true));
-//		erro.checkThat(isMesmaData(locacao.getDataRetorno(), DataUtils.obterDataComDiferencaDias(1)), is(true));
-
-		error.checkThat(locacao.getDataLocacao(), ehHoje());
-		error.checkThat(locacao.getDataRetorno(), ehHojeComDiferencaDias(1));
-
-		error.checkThat(locacao.getValor(), is(equalTo(5.0)));
-		error.checkThat(locacao.getValor(), is(not(6.0)));
-		assertEquals(5.0, locacao.getValor(), 0.01);
-		error.checkThat(isMesmaData(locacao.getDataLocacao(), new Date()), is(true));
-		error.checkThat(isMesmaData(locacao.getDataRetorno(), DataUtils.obterDataComDiferencaDias(1)), is(true));
+		error.checkThat(isMesmaData(locacao.getDataLocacao(), DataUtils.obterData(28, 4, 2017)), is(true));
+		error.checkThat(isMesmaData(locacao.getDataRetorno(), DataUtils.obterData(29, 4, 2017)), is(true));
 
 	}
 
@@ -319,22 +325,18 @@ public class LocacaoServiceTest {
 
 	@Test
 //	@Ignore
-	public void deveDevolverNaSegundaAoAlugarNoSabado() throws FilmeSemEstoqueException, LocadoraException {
-		Assume.assumeTrue(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
+	public void deveDevolverNaSegundaAoAlugarNoSabado() throws Exception {
+//		Assume.assumeTrue(DataUtils.verificarDiaSemana(new Date(), Calendar.SATURDAY));
 		// cenario
 		Usuario usuario = umUsuario().agora();
 		List<Filme> filmes = Arrays.asList(umFilme().agora());
+
+		Mockito.doReturn(DataUtils.obterData(29, 4, 2017)).when(service).obterData();
 
 		// acao
 		Locacao retorno = service.alugarFilme(usuario, filmes);
 
 		// verificacao
-		boolean ehSegunda = DataUtils.verificarDiaSemana(retorno.getDataRetorno(), Calendar.MONDAY);
-		Assert.assertTrue(ehSegunda);
-//		assertThat(retorno.getDataRetorno(), new DiaSemanaMatcher(Calendar.MONDAY));
-		assertThat(retorno.getDataRetorno(), caiEm(Calendar.MONDAY));
-
-//		assertThat(retorno.getDataRetorno(), caiEm(Calendar.MONDAY));
 		assertThat(retorno.getDataRetorno(), caiNumaSegunda());
 
 	}

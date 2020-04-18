@@ -21,12 +21,12 @@ public class LocacaoService {
 	private SPCService spcService;
 
 	private EmailService emailService;
-	
+
 	public void prorrogarLocacao(Locacao locacao, int dias) {
 		Locacao locacao2 = new Locacao();
 		locacao2.setUsuario(locacao.getUsuario());
 		locacao2.setFilmes(locacao.getFilmes());
-		locacao2.setDataLocacao(new Date());
+		locacao2.setDataLocacao(obterData());
 		locacao2.setDataRetorno(DataUtils.obterDataComDiferencaDias(dias));
 		locacao2.setValor(locacao.getValor() * dias);
 		dao.salvar(locacao2);
@@ -58,13 +58,35 @@ public class LocacaoService {
 		if (negativado) {
 			throw new LocadoraException("Usuário negativo");
 		}
-		
-		
+
 		Locacao locacao = new Locacao();
 		locacao.setFilmes(filmes);
 		locacao.setUsuario(usuario);
-		locacao.setDataLocacao(new Date());
+		locacao.setDataLocacao(obterData());
+		locacao.setValor(calcularValorLocacao(filmes));
 
+		// Entrega no dia seguinte
+		Date dataEntrega = obterData();
+		dataEntrega = adicionarDias(dataEntrega, 1);
+		if (DataUtils.verificarDiaSemana(dataEntrega, Calendar.SUNDAY)) {
+			dataEntrega = adicionarDias(dataEntrega, 1);
+		}
+		locacao.setDataRetorno(dataEntrega);
+
+		// Salvando a locacao...
+		// TODO adicionar método para salvar
+		dao.salvar(locacao);
+
+		return locacao;
+
+	}
+
+	protected Date obterData() {
+		return new Date();
+	}
+
+	private Double calcularValorLocacao(List<Filme> filmes) {
+		System.out.println("Entrou aqui, estou calculando");
 		Double valorTotal = 0d;
 		for (int i = 0; i < filmes.size(); i++) {
 			Filme filme = filmes.get(i);
@@ -86,28 +108,13 @@ public class LocacaoService {
 			valorTotal += valorFilme;
 
 		}
-		locacao.setValor(valorTotal);
-
-		// Entrega no dia seguinte
-		Date dataEntrega = new Date();
-		dataEntrega = adicionarDias(dataEntrega, 1);
-		if (DataUtils.verificarDiaSemana(dataEntrega, Calendar.SUNDAY)) {
-			dataEntrega = adicionarDias(dataEntrega, 1);
-		}
-		locacao.setDataRetorno(dataEntrega);
-
-		// Salvando a locacao...
-		// TODO adicionar método para salvar
-		dao.salvar(locacao);
-
-		return locacao;
-
+		return valorTotal;
 	}
 
 	public void notificarAtrasos() {
 		List<Locacao> locacoes = dao.obterLocacoesPendentes();
 		for (Locacao locacao : locacoes) {
-			if (locacao.getDataRetorno().before(new Date()))
+			if (locacao.getDataRetorno().before(obterData()))
 				emailService.notificarAtraso(locacao.getUsuario());
 		}
 	}
